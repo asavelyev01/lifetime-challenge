@@ -61,63 +61,36 @@ impl<'a> Lexer<'a> {
         Lexer { src, pos: 0 }
     }
 
+    // TODO(challenge): implement
     pub fn offset(&self) -> usize {
-        self.pos
+        todo!("p02: offset")
     }
 
-    // `self.src` is a `&'a str` (Copy), so slicing it yields `&'a str` — not tied to `&self`.
-    pub fn remainder(&self) -> &'a str {
-        &self.src[self.pos..]
-    }
-
-    /// Byte offset of the first char at/after `from` that fails `pred` (or the end).
-    fn scan_while(&self, from: usize, pred: impl Fn(char) -> bool) -> usize {
-        self.src[from..].find(|c| !pred(c)).map_or(self.src.len(), |i| from + i)
+    // TODO(challenge): implement + fix the signature
+    pub fn remainder(&self) -> &str {
+        let _ = (self.src, self.pos);
+        todo!("p02: remainder")
     }
 }
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Result<Token<'a>, LexError>;
 
+    // TODO(challenge): implement
     fn next(&mut self) -> Option<Self::Item> {
-        let start = self.scan_while(self.pos, char::is_whitespace);
-        let Some(c) = self.src[start..].chars().next() else {
-            self.pos = start; // only whitespace was left: exhausted
-            return None;
-        };
-        let src = self.src; // copy the `&'a str` out so the slices below are `&'a str`
-        let (token, end) = if c == '_' || c.is_alphabetic() {
-            let end = self.scan_while(start, |c| c == '_' || c.is_alphanumeric());
-            (Token::Ident(&src[start..end]), end)
-        } else if c.is_ascii_digit() {
-            let end = self.scan_while(start, |c| c.is_ascii_digit());
-            (Token::Number(&src[start..end]), end)
-        } else if c == '"' {
-            match src[start + 1..].find('"') {
-                Some(len) => (Token::Str(&src[start + 1..start + 1 + len]), start + len + 2),
-                None => {
-                    self.pos = src.len();
-                    return Some(Err(LexError::UnterminatedString { start }));
-                }
-            }
-        } else {
-            (Token::Punct(c), start + c.len_utf8())
-        };
-        self.pos = end;
-        Some(Ok(token))
+        todo!("p02: next")
     }
 }
 
 impl<'a> Token<'a> {
-    // Matching on `*self` copies out the `&'a str` payload, so the result isn't tied to `&self`.
-    pub fn lexeme(&self) -> Option<&'a str> {
-        match *self {
-            Token::Ident(s) | Token::Number(s) | Token::Str(s) => Some(s),
-            Token::Punct(_) => None,
-        }
+    // TODO(challenge): implement + fix the signature
+    pub fn lexeme(&self) -> Option<&str> {
+        todo!("p02: lexeme")
     }
 }
 
+// TODO(challenge): implement
 pub fn tokenize(src: &str) -> Result<Vec<Token<'_>>, LexError> {
-    Lexer::new(src).collect()
+    let _ = src;
+    todo!("p02: tokenize")
 }

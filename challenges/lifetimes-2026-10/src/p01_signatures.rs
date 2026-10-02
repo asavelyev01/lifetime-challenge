@@ -32,36 +32,26 @@
 //!   with `s`, `x`, `z`, `ch` or `sh` (ASCII case-insensitive), else `"s"`.
 //!   `plural_suffix("Box", 2) == "es"`, `plural_suffix("cat", 0) == "s"`.
 
-// The result is a sub-slice of `s` only; `prefix` is just compared against.
-pub fn strip<'a>(s: &'a str, prefix: &str) -> &'a str {
-    s.strip_prefix(prefix).unwrap_or(s)
+// TODO(challenge): implement + fix the signature
+pub fn strip<'a>(s: &'a str, prefix: &'a str) -> &'a str {
+    let _ = (s, prefix);
+    todo!("p01: strip")
 }
 
-// Two different lifetimes: the slice borrow (`&[...]`) is short, the strings (`'s`) live on.
-pub fn longest<'s>(items: &[&'s str]) -> Option<&'s str> {
-    // `max_by_key` returns the *last* maximum, so fold to keep the first one.
-    items.iter().copied().fold(None, |best, item| match best {
-        Some(b) if b.chars().count() >= item.chars().count() => Some(b),
-        _ => Some(item),
-    })
+// TODO(challenge): implement + fix the signature
+pub fn longest<'a>(items: &'a [&'a str]) -> Option<&'a str> {
+    let _ = items;
+    todo!("p01: longest")
 }
 
-pub fn lookup<'a>(config: &'a str, key: &str) -> Option<&'a str> {
-    config
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .filter_map(|line| line.split_once('='))
-        .find(|(k, _)| k.trim() == key)
-        .map(|(_, v)| v.trim())
+// TODO(challenge): implement + fix the signature
+pub fn lookup<'a>(config: &'a str, key: &'a str) -> Option<&'a str> {
+    let _ = (config, key);
+    todo!("p01: lookup")
 }
 
-// Only string literals are ever returned, so the result is `'static` and `word` needs no
-// relationship with it at all.
-pub fn plural_suffix(word: &str, count: usize) -> &'static str {
-    if count == 1 {
-        return "";
-    }
-    let w = word.to_ascii_lowercase();
-    if ["s", "x", "z", "ch", "sh"].iter().any(|end| w.ends_with(end)) { "es" } else { "s" }
+// TODO(challenge): implement + fix the signature
+pub fn plural_suffix<'a>(word: &'a str, count: usize) -> &'a str {
+    let _ = (word, count);
+    todo!("p01: plural_suffix")
 }

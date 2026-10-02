@@ -55,5 +55,5 @@ cargo test -p lifetimes-2026-10 --doc -- checks::p05::spans_outlive   # one comp
 * No `unsafe` (`#![forbid(unsafe_code)]`), no `Box::leak`/`mem::forget` tricks, no
   `'static` cheats.
 
-Reference solutions: `REF_SHA` (**spoilers**: `git show REF_SHA`)
-Start of the challenge: `START_SHA`
+Reference solutions: `11576bfce20919f8db5672450a521198841d1c39` (**spoilers**: `git show 11576bfce20919f8db5672450a521198841d1c39 -- challenges/lifetimes-2026-10/src`)
+Start of the challenge (grading baseline): the commit `challenge(lifetimes-2026-10): strip solutions — ready to solve`, the child of the reference commit.
