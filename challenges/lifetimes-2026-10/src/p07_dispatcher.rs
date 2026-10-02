@@ -50,15 +50,17 @@ pub enum Flow {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HandlerId(u64);
 
-// TODO(challenge): fix the types
+/// A boxed handler that may borrow from its environment for `'h`, and that accepts events of
+/// *any* lifetime (`&Event<'_>` in `Fn` sugar is higher-ranked: `for<'e> FnMut(&Event<'e>)`).
+type Handler<'h> = Box<dyn FnMut(&Event<'_>) -> Flow + 'h>;
+
 #[derive(Default)]
-pub struct Dispatcher {
-    handlers: Vec<(HandlerId, Box<dyn FnMut(&Event<'_>) -> Flow>)>,
+pub struct Dispatcher<'h> {
+    handlers: Vec<(HandlerId, Handler<'h>)>,
     next_id: u64,
 }
 
-// TODO(challenge): fix the types + implement
-impl Dispatcher {
+impl<'h> Dispatcher<'h> {
     pub fn new() -> Self {
         Dispatcher { handlers: Vec::new(), next_id: 0 }
     }
@@ -71,19 +73,28 @@ impl Dispatcher {
         self.handlers.is_empty()
     }
 
-    pub fn subscribe(&mut self, handler: impl FnMut(&Event<'_>) -> Flow + 'static) -> HandlerId {
-        let _ = (handler, self.next_id);
-        todo!("p07: subscribe")
+    pub fn subscribe(&mut self, handler: impl FnMut(&Event<'_>) -> Flow + 'h) -> HandlerId {
+        let id = HandlerId(self.next_id);
+        self.next_id += 1;
+        self.handlers.push((id, Box::new(handler)));
+        id
     }
 
     pub fn unsubscribe(&mut self, id: HandlerId) -> bool {
-        let _ = id;
-        todo!("p07: unsubscribe")
+        let before = self.handlers.len();
+        self.handlers.retain(|(h, _)| *h != id);
+        self.handlers.len() != before
     }
 
     pub fn dispatch(&mut self, event: &Event<'_>) -> usize {
-        let _ = event;
-        todo!("p07: dispatch")
+        let mut called = 0;
+        for (_, handler) in &mut self.handlers {
+            called += 1;
+            if handler(event) == Flow::Stop {
+                break;
+            }
+        }
+        called
     }
 }
 
@@ -93,8 +104,17 @@ pub struct Filter {
     pub skip_prefix: String,
 }
 
-// TODO(challenge): implement + fix the signature
-pub fn texts<'e>(events: &'e [Event<'e>], filter: &Filter) -> impl Iterator<Item = &'e str> {
-    let _ = (events, filter);
-    std::iter::from_fn(|| todo!("p07: texts"))
+// Edition 2024: `impl Trait` in return position captures every lifetime in scope unless told
+// otherwise. `use<'e>` limits it to `'e`, which is only sound because we copy what we need
+// out of `filter` before building the iterator.
+pub fn texts<'e>(events: &'e [Event<'e>], filter: &Filter) -> impl Iterator<Item = &'e str> + use<'e> {
+    let Filter { min_chars, skip_prefix } = filter.clone();
+    events.iter().filter_map(move |e| match *e {
+        Event::Text(t)
+            if t.chars().count() >= min_chars && (skip_prefix.is_empty() || !t.starts_with(&skip_prefix)) =>
+        {
+            Some(t)
+        }
+        _ => None,
+    })
 }

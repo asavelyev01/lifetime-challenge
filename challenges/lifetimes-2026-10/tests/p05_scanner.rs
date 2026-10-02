@@ -24,10 +24,11 @@ fn oracle(keywords: &[&str], text: &str) -> Vec<(usize, String, usize)> {
         let mut best: Option<(usize, usize)> = None; // (len, idx)
         if before_ok {
             for (i, k) in keywords.iter().enumerate() {
-                if text[p..].starts_with(k) && text[p + k.len()..].chars().next().is_none_or(|c| !word(c)) {
-                    if best.is_none_or(|(l, _)| k.len() > l) {
-                        best = Some((k.len(), i));
-                    }
+                if text[p..].starts_with(k)
+                    && text[p + k.len()..].chars().next().is_none_or(|c| !word(c))
+                    && best.is_none_or(|(l, _)| k.len() > l)
+                {
+                    best = Some((k.len(), i));
                 }
             }
         }

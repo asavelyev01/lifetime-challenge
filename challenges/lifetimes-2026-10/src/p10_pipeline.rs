@@ -68,10 +68,10 @@ impl<'r> Request<'r> {
         self
     }
 
-    // TODO(challenge): implement + fix the signature
-    pub fn header(&self, name: &str) -> Option<&str> {
-        let _ = name;
-        todo!("p10: header")
+    // The values are `&'r str` copied out of the Vec, so the result borrows the raw input,
+    // not `self` — callers can keep it while mutating the request.
+    pub fn header(&self, name: &str) -> Option<&'r str> {
+        self.headers.iter().find(|(n, _)| n.eq_ignore_ascii_case(name)).map(|&(_, v)| v)
     }
 }
 
@@ -106,16 +106,18 @@ pub struct StripPrefix {
     pub prefix: String,
 }
 
-// TODO(challenge): add fields if needed
 pub struct RateLimit {
     max_per_user: usize,
     counters: Counters,
+    // Serialises the read-modify-write on `counters` across `.await`s. It has to be an async
+    // mutex: a `std::sync::MutexGuard` held across an await makes the future `!Send`, and
+    // `BoxFuture` requires `Send`. (A per-user lock would be finer-grained; one is enough here.)
+    gate: tokio::sync::Mutex<()>,
 }
 
 impl RateLimit {
-    // TODO(challenge): adjust if you add fields
     pub fn new(max_per_user: usize) -> Self {
-        RateLimit { max_per_user, counters: Counters::default() }
+        RateLimit { max_per_user, counters: Counters::default(), gate: tokio::sync::Mutex::new(()) }
     }
 
     pub fn counters(&self) -> &Counters {
@@ -123,35 +125,78 @@ impl RateLimit {
     }
 }
 
-// TODO(challenge): implement
 impl Middleware for RequireHeader {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
-        let _ = (req, &self.name);
-        todo!("p10: RequireHeader")
+        Box::pin(async move {
+            match req.header(&self.name) {
+                Some(_) => Ok(()),
+                None => Err(Reject::MissingHeader(self.name.clone())),
+            }
+        })
     }
 }
 
-// TODO(challenge): implement
 impl Middleware for StripPrefix {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
-        let _ = (req, &self.prefix);
-        todo!("p10: StripPrefix")
+        Box::pin(async move {
+            let prefix = self.prefix.as_str();
+            match &mut req.path {
+                Cow::Borrowed(path) => {
+                    // Copy the `&'r str` out of the `&mut &'r str` so the new slice is `&'r`
+                    // too (slicing through the `&mut` would only give a short reborrow).
+                    let full: &'r str = path;
+                    let rest = full.strip_prefix(prefix).ok_or(Reject::NotFound)?;
+                    *path = if rest.is_empty() { "/" } else { rest };
+                }
+                Cow::Owned(path) => {
+                    if !path.starts_with(prefix) {
+                        return Err(Reject::NotFound);
+                    }
+                    path.drain(..prefix.len());
+                    if path.is_empty() {
+                        path.push('/');
+                    }
+                }
+            }
+            Ok(())
+        })
     }
 }
 
-// TODO(challenge): implement
 impl Middleware for RateLimit {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
-        let _ = (req, self.max_per_user, &self.counters);
-        todo!("p10: RateLimit")
+        Box::pin(async move {
+            let user = req.header("user").unwrap_or("anonymous");
+            let _guard = self.gate.lock().await;
+            let used = self.counters.get(user).await;
+            if used >= self.max_per_user {
+                return Err(Reject::RateLimited { user: user.to_string() });
+            }
+            self.counters.set(user, used + 1).await;
+            Ok(())
+        })
     }
 }
 
 pub struct FnMiddleware<F>(F);
 
-// TODO(challenge): add bounds (and an `impl Middleware for FnMiddleware<F>`)
-pub fn from_fn<F>(f: F) -> FnMiddleware<F> {
+// The bound has to be spelled out on `from_fn` itself: closure signatures are inferred from
+// the bound at the call site, and only an explicit higher-ranked `Fn(&'a mut Request<'r>) ->
+// BoxFuture<'a, _>` tells the compiler that the returned future may borrow the argument.
+pub fn from_fn<F>(f: F) -> FnMiddleware<F>
+where
+    F: for<'a, 'r> Fn(&'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> + Send + Sync,
+{
     FnMiddleware(f)
+}
+
+impl<F> Middleware for FnMiddleware<F>
+where
+    F: for<'a, 'r> Fn(&'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> + Send + Sync,
+{
+    fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
+        (self.0)(req)
+    }
 }
 
 pub struct Pipeline<'m> {
@@ -174,15 +219,14 @@ impl<'m> Pipeline<'m> {
         self
     }
 
-    // TODO(challenge): implement
-    pub async fn run<'r>(&self, req: Request<'r>) -> Result<Request<'r>, Reject> {
-        let _ = (req, &self.stages);
-        todo!("p10: run")
+    pub async fn run<'r>(&self, mut req: Request<'r>) -> Result<Request<'r>, Reject> {
+        for stage in &self.stages {
+            stage.handle(&mut req).await?;
+        }
+        Ok(req)
     }
 
-    // TODO(challenge): implement
     pub async fn run_all<'r>(&self, reqs: Vec<Request<'r>>) -> Vec<Result<Request<'r>, Reject>> {
-        let _ = reqs;
-        todo!("p10: run_all")
+        futures::future::join_all(reqs.into_iter().map(|req| self.run(req))).await
     }
 }

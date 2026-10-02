@@ -70,30 +70,44 @@ impl Store {
     }
 }
 
-// TODO(challenge): implement + fix the signature
-pub async fn lookup<'s>(store: &'s Store, key: &str) -> Option<&'s str> {
-    let _ = (store, key);
-    todo!("p08: lookup")
+// An `async fn`'s future captures *all* arguments, so `key` would have to outlive the await.
+// Instead: a plain fn that copies the key up front and returns a future that only captures
+// `'s` (`use<'s>` — in edition 2024, `+ 's` alone would still capture the key's lifetime).
+pub fn lookup<'s>(store: &'s Store, key: &str) -> impl Future<Output = Option<&'s str>> + Send + use<'s> {
+    let key = key.to_owned();
+    async move { store.get(&key).await }
 }
 
-// TODO(challenge): implement
+// `join_all` polls all lookups on the current task; the futures may borrow freely because
+// they don't need to be `'static` (unlike spawned tasks).
 pub async fn lookup_all<'s>(store: &'s Store, keys: &[&str]) -> Vec<Option<&'s str>> {
-    let _ = (store, keys);
-    todo!("p08: lookup_all")
+    futures::future::join_all(keys.iter().map(|k| store.get(k))).await
 }
 
-// TODO(challenge): implement
+// `tokio::spawn` needs `'static` futures: each task gets its own `Arc` and an owned key, and
+// returns an owned value (it can't hand out a borrow of a store it doesn't outlive).
 pub fn spawn_lookups(store: Arc<Store>, keys: &[&str]) -> Vec<JoinHandle<Option<String>>> {
-    let _ = (store, keys);
-    todo!("p08: spawn_lookups")
+    keys.iter()
+        .map(|key| {
+            let (store, key) = (Arc::clone(&store), key.to_string());
+            tokio::spawn(async move { store.get(&key).await.map(str::to_owned) })
+        })
+        .collect()
 }
 
-// TODO(challenge): implement + fix the bound
-pub async fn for_each_found<'s, F, Fut>(store: &'s Store, keys: &[&str], f: F) -> usize
+// With `F: FnMut(&str, &'s str) -> Fut`, the single type `Fut` can't depend on the
+// (higher-ranked) lifetime of `key`, nor borrow from the closure itself. `AsyncFnMut` can:
+// its future type is generic over the borrow of both the arguments and the closure.
+pub async fn for_each_found<'s, F>(store: &'s Store, keys: &[&str], mut f: F) -> usize
 where
-    F: FnMut(&str, &'s str) -> Fut,
-    Fut: Future<Output = ()>,
+    F: AsyncFnMut(&str, &'s str),
 {
-    let _ = (store, keys, f);
-    todo!("p08: for_each_found")
+    let mut found = 0;
+    for &key in keys {
+        if let Some(value) = store.get(key).await {
+            f(key, value).await;
+            found += 1;
+        }
+    }
+    found
 }

@@ -43,7 +43,7 @@ async fn lookup_all_runs_concurrently() {
 async fn spawn_lookups_returns_owned_values_in_order() {
     let s = Arc::new(store());
     let handles = {
-        let keys = vec![String::from("b"), String::from("nope"), String::from("é")];
+        let keys = [String::from("b"), String::from("nope"), String::from("é")];
         let refs: Vec<&str> = keys.iter().map(String::as_str).collect();
         spawn_lookups(Arc::clone(&s), &refs)
     };

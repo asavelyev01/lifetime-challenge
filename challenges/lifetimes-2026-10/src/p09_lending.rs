@@ -37,13 +37,26 @@
 
 use std::io::{self, BufRead};
 
-// TODO(challenge): Part B — this trait has a problem
-pub trait LendingIterator {
-    type Item<'a>
-    where
-        Self: 'a;
+// Why the GAT version fails: `F: FnMut(I::Item<'_>)` means `for<'a> FnMut(I::Item<'a>)`, and
+// `Item<'a>` is only well-formed when `I: 'a` (the GAT's `where Self: 'a`). A `for<'a>` binder
+// can't carry that condition, so the compiler must prove it for *every* `'a` — including
+// `'static` — i.e. it demands `I: 'static`.
+//
+// The fix: put the item type in a separate trait, parameterised by the lifetime, with a
+// defaulted type parameter `&'a Self`. Mentioning `<I as Lending<'a>>` then implicitly
+// mentions the type `&'a I`, whose well-formedness *implies* `I: 'a` — and implied bounds do
+// work under `for<'a>` binders. So `for<'a> FnMut(Item<'a, I>)` only ranges over lifetimes
+// for which `I: 'a`, and borrowed iterators are accepted.
+// (See Sabrina Jewson, "The Better Alternative to Lifetime GATs".)
+pub trait Lending<'a, ImpliedBound = &'a Self> {
+    type Item;
+}
 
-    fn next(&mut self) -> Option<Self::Item<'_>>;
+/// The item type lent by `I` for a borrow of length `'a`.
+pub type Item<'a, I> = <I as Lending<'a>>::Item;
+
+pub trait LendingIterator: for<'a> Lending<'a> {
+    fn next(&mut self) -> Option<Item<'_, Self>>;
 }
 
 pub struct WindowsMut<'s, T> {
@@ -57,38 +70,54 @@ pub fn windows_mut<T>(slice: &mut [T], size: usize) -> WindowsMut<'_, T> {
     WindowsMut { slice, size, pos: 0 }
 }
 
-impl<'s, T> LendingIterator for WindowsMut<'s, T> {
-    type Item<'a>
-        = &'a mut [T]
-    where
-        Self: 'a;
+impl<'a, T> Lending<'a> for WindowsMut<'_, T> {
+    type Item = &'a mut [T];
+}
 
-    // TODO(challenge): implement
+impl<T> LendingIterator for WindowsMut<'_, T> {
+    // Reborrowing through `&mut self` is exactly what `Iterator` can't do and a lending
+    // iterator can: the window lives only as long as this borrow of `self`.
     fn next(&mut self) -> Option<&mut [T]> {
-        let _ = (&self.slice, self.size, self.pos);
-        todo!("p09: WindowsMut::next")
+        let window = self.slice.get_mut(self.pos..self.pos + self.size)?;
+        self.pos += 1;
+        Some(window)
     }
 }
 
 pub struct Lines<R> {
     reader: R,
     buf: String,
+    done: bool,
 }
 
 pub fn lines<R: BufRead>(reader: R) -> Lines<R> {
-    Lines { reader, buf: String::new() }
+    Lines { reader, buf: String::new(), done: false }
+}
+
+impl<'a, R> Lending<'a> for Lines<R> {
+    type Item = io::Result<&'a str>;
 }
 
 impl<R: BufRead> LendingIterator for Lines<R> {
-    type Item<'a>
-        = io::Result<&'a str>
-    where
-        Self: 'a;
-
-    // TODO(challenge): implement
     fn next(&mut self) -> Option<io::Result<&str>> {
-        let _ = (&self.reader, &self.buf);
-        todo!("p09: Lines::next")
+        if self.done {
+            return None;
+        }
+        self.buf.clear();
+        match self.reader.read_line(&mut self.buf) {
+            Ok(0) => {
+                self.done = true;
+                None
+            }
+            Ok(_) => {
+                let line = self.buf.strip_suffix('\n').unwrap_or(&self.buf);
+                Some(Ok(line.strip_suffix('\r').unwrap_or(line)))
+            }
+            Err(e) => {
+                self.done = true;
+                Some(Err(e))
+            }
+        }
     }
 }
 
@@ -101,35 +130,39 @@ pub fn enumerate<I: LendingIterator>(inner: I) -> Enumerate<I> {
     Enumerate { inner, count: 0 }
 }
 
-impl<I: LendingIterator> LendingIterator for Enumerate<I> {
-    type Item<'a>
-        = (usize, I::Item<'a>)
-    where
-        Self: 'a;
+impl<'a, I: LendingIterator> Lending<'a> for Enumerate<I> {
+    type Item = (usize, Item<'a, I>);
+}
 
-    // TODO(challenge): implement
-    fn next(&mut self) -> Option<Self::Item<'_>> {
-        let _ = (&self.inner, self.count);
-        todo!("p09: Enumerate::next")
+impl<I: LendingIterator> LendingIterator for Enumerate<I> {
+    fn next(&mut self) -> Option<Item<'_, Self>> {
+        let item = self.inner.next()?;
+        let i = self.count;
+        self.count += 1;
+        Some((i, item))
     }
 }
 
-// TODO(challenge): implement (+ Part B)
-pub fn for_each<I, F>(it: I, f: F)
+pub fn for_each<I, F>(mut it: I, mut f: F)
 where
     I: LendingIterator,
-    F: FnMut(I::Item<'_>),
+    F: FnMut(Item<'_, I>),
 {
-    let _ = (it, f);
-    todo!("p09: for_each")
+    while let Some(item) = it.next() {
+        f(item);
+    }
 }
 
-// TODO(challenge): implement (+ Part B)
-pub fn count_where<I, P>(it: I, pred: P) -> usize
+pub fn count_where<I, P>(mut it: I, mut pred: P) -> usize
 where
     I: LendingIterator,
-    P: FnMut(&I::Item<'_>) -> bool,
+    P: FnMut(&Item<'_, I>) -> bool,
 {
-    let _ = (it, pred);
-    todo!("p09: count_where")
+    let mut n = 0;
+    while let Some(item) = it.next() {
+        if pred(&item) {
+            n += 1;
+        }
+    }
+    n
 }
