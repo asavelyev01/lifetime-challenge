@@ -1,0 +1,12 @@
+[package]
+name = "lifetimes-2026-10"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+futures = "0.3"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time"] }
+
+[dev-dependencies]
+rand = { version = "0.9", features = ["small_rng"] }
