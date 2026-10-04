@@ -33,12 +33,8 @@
 //!   `plural_suffix("Box", 2) == "es"`, `plural_suffix("cat", 0) == "s"`.
 
 // TODO(challenge): implement + fix the signature
-pub fn strip<'a, 'b>(s: &'a str, prefix: &'b str) -> &'a str {
-    if s.starts_with(prefix) {
-        &s[prefix.len()..]
-    } else {
-        s
-    }
+pub fn strip<'a>(s: &'a str, prefix: &str) -> &'a str {
+    s.strip_prefix(prefix).unwrap_or(s)
 }
 
 // TODO(challenge): implement + fix the signature
@@ -59,7 +55,7 @@ pub fn longest<'a, 'b>(items: &'a [&'b str]) -> Option<&'b str> {
 }
 
 // TODO(challenge): implement + fix the signature
-pub fn lookup<'a, 'k>(config: &'a str, key: &'k str) -> Option<&'a str> {
+pub fn lookup<'a>(config: &'a str, key: &str) -> Option<&'a str> {
     for line in config.split('\n') {
         if !line.starts_with('#')
             && let Some((k, v)) = line.split_once('=')
@@ -69,7 +65,7 @@ pub fn lookup<'a, 'k>(config: &'a str, key: &'k str) -> Option<&'a str> {
         }
     }
 
-    return None;
+    None
 }
 
 // TODO(challenge): implement + fix the signature
