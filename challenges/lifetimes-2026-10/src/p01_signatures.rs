@@ -33,25 +33,55 @@
 //!   `plural_suffix("Box", 2) == "es"`, `plural_suffix("cat", 0) == "s"`.
 
 // TODO(challenge): implement + fix the signature
-pub fn strip<'a>(s: &'a str, prefix: &'a str) -> &'a str {
-    let _ = (s, prefix);
-    todo!("p01: strip")
+pub fn strip<'a, 'b>(s: &'a str, prefix: &'b str) -> &'a str {
+    if s.starts_with(prefix) {
+        &s[prefix.len()..]
+    } else {
+        s
+    }
 }
 
 // TODO(challenge): implement + fix the signature
-pub fn longest<'a>(items: &'a [&'a str]) -> Option<&'a str> {
-    let _ = items;
-    todo!("p01: longest")
+pub fn longest<'a, 'b>(items: &'a [&'b str]) -> Option<&'b str> {
+    fn length(s: &str) -> usize {
+        s.chars().count()
+    }
+
+    let mut long: Option<&'b str> = None;
+
+    for s in items {
+        if long.is_none_or(|l| length(s) > length(l)) {
+            long = Some(*s)
+        }
+    }
+
+    long
 }
 
 // TODO(challenge): implement + fix the signature
-pub fn lookup<'a>(config: &'a str, key: &'a str) -> Option<&'a str> {
-    let _ = (config, key);
-    todo!("p01: lookup")
+pub fn lookup<'a, 'k>(config: &'a str, key: &'k str) -> Option<&'a str> {
+    for line in config.split('\n') {
+        if !line.starts_with('#')
+            && let Some((k, v)) = line.split_once('=')
+            && k.trim() == key.trim()
+        {
+            return Some(v.trim());
+        }
+    }
+
+    return None;
 }
 
 // TODO(challenge): implement + fix the signature
-pub fn plural_suffix<'a>(word: &'a str, count: usize) -> &'a str {
-    let _ = (word, count);
-    todo!("p01: plural_suffix")
+pub fn plural_suffix(word: &str, count: usize) -> &'static str {
+    if count == 1 {
+        ""
+    } else if ["s", "x", "z", "ch", "sh"]
+        .iter()
+        .any(|s| word.to_lowercase().ends_with(s))
+    {
+        "es"
+    } else {
+        "s"
+    }
 }
