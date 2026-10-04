@@ -60,7 +60,10 @@ pub struct Dispatcher {
 // TODO(challenge): fix the types + implement
 impl Dispatcher {
     pub fn new() -> Self {
-        Dispatcher { handlers: Vec::new(), next_id: 0 }
+        Dispatcher {
+            handlers: Vec::new(),
+            next_id: 0,
+        }
     }
 
     pub fn len(&self) -> usize {

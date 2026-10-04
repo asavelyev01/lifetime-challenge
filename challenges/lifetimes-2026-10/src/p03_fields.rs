@@ -46,7 +46,10 @@ use std::borrow::Cow;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Field<'a> {
     Flag(Cow<'a, str>),
-    Pair { key: Cow<'a, str>, value: Cow<'a, str> },
+    Pair {
+        key: Cow<'a, str>,
+        value: Cow<'a, str>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

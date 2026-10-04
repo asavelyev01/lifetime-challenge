@@ -60,7 +60,10 @@ pub struct Request<'r> {
 
 impl<'r> Request<'r> {
     pub fn new(path: &'r str) -> Self {
-        Request { path: Cow::Borrowed(path), headers: Vec::new() }
+        Request {
+            path: Cow::Borrowed(path),
+            headers: Vec::new(),
+        }
     }
 
     pub fn with_header(mut self, name: &'r str, value: &'r str) -> Self {
@@ -115,7 +118,10 @@ pub struct RateLimit {
 impl RateLimit {
     // TODO(challenge): adjust if you add fields
     pub fn new(max_per_user: usize) -> Self {
-        RateLimit { max_per_user, counters: Counters::default() }
+        RateLimit {
+            max_per_user,
+            counters: Counters::default(),
+        }
     }
 
     pub fn counters(&self) -> &Counters {

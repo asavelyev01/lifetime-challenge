@@ -22,7 +22,10 @@ fn intern_all_empty() {
 #[test]
 fn intern_all_is_case_and_unicode_exact() {
     let mut interner = Interner::new();
-    assert_eq!(intern_all(&mut interner, "A a é e\u{301} a A"), [0, 1, 2, 3, 1, 0]);
+    assert_eq!(
+        intern_all(&mut interner, "A a é e\u{301} a A"),
+        [0, 1, 2, 3, 1, 0]
+    );
 }
 
 #[test]
@@ -69,5 +72,8 @@ fn intern_all_is_fast_for_many_duplicates() {
     let took = start.elapsed();
     assert_eq!(ids.len(), 300_000);
     assert_eq!(ids.iter().max(), Some(&29_999), "30 000 distinct words");
-    assert!(took < Duration::from_secs(3), "interning took {took:?}; must be O(1) per word");
+    assert!(
+        took < Duration::from_secs(3),
+        "interning took {took:?}; must be O(1) per word"
+    );
 }

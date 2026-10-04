@@ -38,7 +38,10 @@ pub struct Interner<'a> {
 
 impl<'a> Interner<'a> {
     pub fn new() -> Self {
-        Interner { ids: HashMap::new(), strings: Vec::new() }
+        Interner {
+            ids: HashMap::new(),
+            strings: Vec::new(),
+        }
     }
 
     pub fn len(&self) -> usize {

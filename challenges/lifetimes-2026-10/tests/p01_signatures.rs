@@ -23,7 +23,10 @@ fn strip_returns_a_subslice_of_s() {
     let s = String::from("prefix-body");
     let out: &str = strip(&s, "prefix-");
     assert_eq!(out, "body");
-    assert!(std::ptr::eq(out.as_ptr(), s[7..].as_ptr()), "should borrow from s, not copy");
+    assert!(
+        std::ptr::eq(out.as_ptr(), s[7..].as_ptr()),
+        "should borrow from s, not copy"
+    );
 }
 
 #[test]
@@ -50,8 +53,16 @@ fn lookup_examples() {
 #[test]
 fn lookup_skips_comments_blank_and_malformed_lines() {
     let cfg = "\n# key = commented\n   \nnot a pair\n  key  =  value with spaces  \nkey=second\n";
-    assert_eq!(lookup(cfg, "key"), Some("value with spaces"), "first match, trimmed");
-    assert_eq!(lookup(cfg, "# key"), None, "comment lines are skipped entirely");
+    assert_eq!(
+        lookup(cfg, "key"),
+        Some("value with spaces"),
+        "first match, trimmed"
+    );
+    assert_eq!(
+        lookup(cfg, "# key"),
+        None,
+        "comment lines are skipped entirely"
+    );
     assert_eq!(lookup(cfg, "not a pair"), None);
 }
 
@@ -62,7 +73,11 @@ fn lookup_details() {
     assert_eq!(lookup("=v", ""), Some("v"), "empty key is a key too");
     assert_eq!(lookup("k=1\r\nj=2\r\n", "k"), Some("1"), "CRLF is trimmed");
     assert_eq!(lookup("", "k"), None);
-    assert_eq!(lookup("  # x=1\nx=2", "x"), Some("2"), "comment after trimming");
+    assert_eq!(
+        lookup("  # x=1\nx=2", "x"),
+        Some("2"),
+        "comment after trimming"
+    );
 }
 
 #[test]
@@ -74,9 +89,19 @@ fn plural_suffix_examples() {
 #[test]
 fn plural_suffix_all_rules() {
     for (w, want) in [
-        ("bus", "es"), ("fox", "es"), ("quiz", "es"), ("church", "es"), ("wish", "es"),
-        ("BUS", "es"), ("WiSh", "es"), ("cat", "s"), ("bath", "s"), ("", "s"), ("h", "s"),
-        ("c", "s"), ("ß", "s"),
+        ("bus", "es"),
+        ("fox", "es"),
+        ("quiz", "es"),
+        ("church", "es"),
+        ("wish", "es"),
+        ("BUS", "es"),
+        ("WiSh", "es"),
+        ("cat", "s"),
+        ("bath", "s"),
+        ("", "s"),
+        ("h", "s"),
+        ("c", "s"),
+        ("ß", "s"),
     ] {
         assert_eq!(plural_suffix(w, 2), want, "word {w:?}");
         assert_eq!(plural_suffix(w, 1), "", "word {w:?}, count 1");

@@ -41,7 +41,11 @@ fn stop_short_circuits() {
     d.subscribe(recorder(&log, "a", Flow::Continue));
     d.subscribe(recorder(&log, "b", Flow::Stop));
     d.subscribe(recorder(&log, "c", Flow::Continue));
-    assert_eq!(d.dispatch(&Event::Click { x: 0, y: -1 }), 2, "a and b called, c not");
+    assert_eq!(
+        d.dispatch(&Event::Click { x: 0, y: -1 }),
+        2,
+        "a and b called, c not"
+    );
     assert_eq!(log.borrow().len(), 2);
 }
 
@@ -64,7 +68,11 @@ fn handlers_keep_state_between_calls() {
         if matches!(e, Event::Key(_)) {
             *c.borrow_mut() += 1;
         }
-        if *c.borrow() >= 2 { Flow::Stop } else { Flow::Continue }
+        if *c.borrow() >= 2 {
+            Flow::Stop
+        } else {
+            Flow::Continue
+        }
     });
     for ch in "abc".chars() {
         d.dispatch(&Event::Key(ch));
@@ -113,11 +121,28 @@ fn texts_filters() {
         Event::Text("abc"),
         Event::Resize { w: 0, h: 0 },
     ];
-    let f = Filter { min_chars: 2, skip_prefix: "#".into() };
-    assert_eq!(texts(&events, &f).collect::<Vec<_>>(), ["ab", "ée", "abc"], "chars, not bytes");
-    let f = Filter { min_chars: 0, skip_prefix: String::new() };
-    assert_eq!(texts(&events, &f).collect::<Vec<_>>(), ["", "ab", "ée", "#tag", "abc"], "empty prefix filters nothing");
-    let f = Filter { min_chars: 3, skip_prefix: "a".into() };
+    let f = Filter {
+        min_chars: 2,
+        skip_prefix: "#".into(),
+    };
+    assert_eq!(
+        texts(&events, &f).collect::<Vec<_>>(),
+        ["ab", "ée", "abc"],
+        "chars, not bytes"
+    );
+    let f = Filter {
+        min_chars: 0,
+        skip_prefix: String::new(),
+    };
+    assert_eq!(
+        texts(&events, &f).collect::<Vec<_>>(),
+        ["", "ab", "ée", "#tag", "abc"],
+        "empty prefix filters nothing"
+    );
+    let f = Filter {
+        min_chars: 3,
+        skip_prefix: "a".into(),
+    };
     assert_eq!(texts(&events, &f).collect::<Vec<_>>(), ["#tag"]);
     assert_eq!(texts(&[], &f).count(), 0);
 }

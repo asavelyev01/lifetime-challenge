@@ -12,7 +12,10 @@ fn reg(items: &[(&str, i64, &[&str])]) -> Registry {
 }
 
 fn snapshot(r: &Registry) -> Vec<(String, i64)> {
-    r.entries().iter().map(|e| (e.name.clone(), e.score)).collect()
+    r.entries()
+        .iter()
+        .map(|e| (e.name.clone(), e.score))
+        .collect()
 }
 
 fn s(items: &[(&str, i64)]) -> Vec<(String, i64)> {
@@ -51,7 +54,14 @@ fn get_or_insert_returns_existing_without_duplicating() {
     assert_eq!(r.len(), 1);
     assert_eq!(r.get("x").unwrap().tags, ["t"]);
     let fresh = r.get_or_insert("y");
-    assert_eq!(fresh, &mut Entry { name: "y".into(), score: 0, tags: vec![] });
+    assert_eq!(
+        fresh,
+        &mut Entry {
+            name: "y".into(),
+            score: 0,
+            tags: vec![]
+        }
+    );
     assert_eq!(r.len(), 2);
 }
 
@@ -60,7 +70,11 @@ fn pair_mut_cases() {
     let mut r = reg(&[("a", 1, &[]), ("b", 2, &[]), ("c", 3, &[])]);
     {
         let (c, a) = r.pair_mut("c", "a").expect("both exist");
-        assert_eq!((c.name.as_str(), a.name.as_str()), ("c", "a"), "argument order");
+        assert_eq!(
+            (c.name.as_str(), a.name.as_str()),
+            ("c", "a"),
+            "argument order"
+        );
         c.score += a.score;
         a.score = 0;
     }
@@ -79,8 +93,16 @@ fn transfer_errors_in_order_and_leave_state_unchanged() {
     let before = snapshot(&r);
     assert_eq!(r.transfer("a", "b", 0), Err(InvalidAmount));
     assert_eq!(r.transfer("a", "b", -1), Err(InvalidAmount));
-    assert_eq!(r.transfer("x", "x", 1), Err(SameEntry), "SameEntry before Unknown");
-    assert_eq!(r.transfer("x", "y", 1), Err(Unknown("x".into())), "from checked first");
+    assert_eq!(
+        r.transfer("x", "x", 1),
+        Err(SameEntry),
+        "SameEntry before Unknown"
+    );
+    assert_eq!(
+        r.transfer("x", "y", 1),
+        Err(Unknown("x".into())),
+        "from checked first"
+    );
     assert_eq!(r.transfer("a", "y", 1), Err(Unknown("y".into())));
     assert_eq!(r.transfer("b", "a", 1), Err(Insufficient { available: 0 }));
     assert_eq!(r.transfer("a", "b", 6), Err(Insufficient { available: 5 }));
@@ -91,12 +113,25 @@ fn transfer_errors_in_order_and_leave_state_unchanged() {
 
 #[test]
 fn merge_moves_score_and_new_tags() {
-    let mut r = reg(&[("a", 1, &["x", "y"]), ("b", 2, &[]), ("c", 3, &["y", "z"]), ("d", 4, &[])]);
+    let mut r = reg(&[
+        ("a", 1, &["x", "y"]),
+        ("b", 2, &[]),
+        ("c", 3, &["y", "z"]),
+        ("d", 4, &[]),
+    ]);
     let merged = r.merge("a", "c").unwrap();
     assert_eq!(merged.name, "c");
     assert_eq!(merged.score, 4);
-    assert_eq!(merged.tags, ["y", "z", "x"], "only missing tags appended, in from's order");
-    assert_eq!(snapshot(&r), s(&[("b", 2), ("c", 4), ("d", 4)]), "order preserved");
+    assert_eq!(
+        merged.tags,
+        ["y", "z", "x"],
+        "only missing tags appended, in from's order"
+    );
+    assert_eq!(
+        snapshot(&r),
+        s(&[("b", 2), ("c", 4), ("d", 4)]),
+        "order preserved"
+    );
 }
 
 #[test]
@@ -105,7 +140,10 @@ fn merge_into_an_earlier_entry() {
     let merged = r.merge("c", "a").unwrap();
     assert_eq!((merged.name.as_str(), merged.score), ("a", 4));
     let merged = r.merge("b", "a").unwrap();
-    assert_eq!((merged.name.as_str(), merged.score, merged.tags.clone()), ("a", 6, vec!["t".to_string()]));
+    assert_eq!(
+        (merged.name.as_str(), merged.score, merged.tags.clone()),
+        ("a", 6, vec!["t".to_string()])
+    );
     assert_eq!(snapshot(&r), s(&[("a", 6)]));
 }
 
@@ -122,10 +160,20 @@ fn merge_errors() {
 
 #[test]
 fn top_by_tag_picks_max_then_earliest() {
-    let r = reg(&[("a", 5, &["x"]), ("b", 9, &["y"]), ("c", 9, &["x", "y"]), ("d", 9, &["x"]), ("e", -1, &["z"])]);
+    let r = reg(&[
+        ("a", 5, &["x"]),
+        ("b", 9, &["y"]),
+        ("c", 9, &["x", "y"]),
+        ("d", 9, &["x"]),
+        ("e", -1, &["z"]),
+    ]);
     assert_eq!(r.top_by_tag("x").unwrap().name, "c");
     assert_eq!(r.top_by_tag("y").unwrap().name, "b");
-    assert_eq!(r.top_by_tag("z").unwrap().name, "e", "negative scores still count");
+    assert_eq!(
+        r.top_by_tag("z").unwrap().name,
+        "e",
+        "negative scores still count"
+    );
     assert!(r.top_by_tag("w").is_none());
     assert!(Registry::new().top_by_tag("x").is_none());
 }

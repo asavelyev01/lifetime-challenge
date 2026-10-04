@@ -54,7 +54,11 @@ pub struct WindowsMut<'s, T> {
 
 pub fn windows_mut<T>(slice: &mut [T], size: usize) -> WindowsMut<'_, T> {
     assert!(size > 0, "window size must be positive");
-    WindowsMut { slice, size, pos: 0 }
+    WindowsMut {
+        slice,
+        size,
+        pos: 0,
+    }
 }
 
 impl<'s, T> LendingIterator for WindowsMut<'s, T> {
@@ -76,7 +80,10 @@ pub struct Lines<R> {
 }
 
 pub fn lines<R: BufRead>(reader: R) -> Lines<R> {
-    Lines { reader, buf: String::new() }
+    Lines {
+        reader,
+        buf: String::new(),
+    }
 }
 
 impl<R: BufRead> LendingIterator for Lines<R> {

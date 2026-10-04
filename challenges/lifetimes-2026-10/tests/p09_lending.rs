@@ -78,10 +78,21 @@ fn lines_statement_example() {
 fn lines_edge_cases() {
     assert_eq!(collect_lines("".as_bytes()), ok(&[]));
     assert_eq!(collect_lines("\n".as_bytes()), ok(&[""]));
-    assert_eq!(collect_lines("x\n".as_bytes()), ok(&["x"]), "no extra empty line at the end");
+    assert_eq!(
+        collect_lines("x\n".as_bytes()),
+        ok(&["x"]),
+        "no extra empty line at the end"
+    );
     assert_eq!(collect_lines("x\n\n".as_bytes()), ok(&["x", ""]));
-    assert_eq!(collect_lines("a\r\r\nb\r".as_bytes()), ok(&["a\r", "b"]), "one \\r only, also on the last line");
-    assert_eq!(collect_lines("ünï\r\ncödé".as_bytes()), ok(&["ünï", "cödé"]));
+    assert_eq!(
+        collect_lines("a\r\r\nb\r".as_bytes()),
+        ok(&["a\r", "b"]),
+        "one \\r only, also on the last line"
+    );
+    assert_eq!(
+        collect_lines("ünï\r\ncödé".as_bytes()),
+        ok(&["ünï", "cödé"])
+    );
 }
 
 #[test]
@@ -95,13 +106,20 @@ fn lines_reuse_one_buffer() {
         n += 1;
     }
     assert_eq!(n, 150);
-    assert!(ptrs.len() <= 3, "lines must be lent from a reused buffer ({} distinct allocations)", ptrs.len());
+    assert!(
+        ptrs.len() <= 3,
+        "lines must be lent from a reused buffer ({} distinct allocations)",
+        ptrs.len()
+    );
 }
 
 #[test]
 fn lines_invalid_utf8_errors_once_then_stops() {
     let bytes: Vec<u8> = b"ok\n\xff\xfe\nnever\n".to_vec();
-    assert_eq!(collect_lines(Cursor::new(bytes)), [Ok("ok".to_string()), Err(io::ErrorKind::InvalidData)]);
+    assert_eq!(
+        collect_lines(Cursor::new(bytes)),
+        [Ok("ok".to_string()), Err(io::ErrorKind::InvalidData)]
+    );
 }
 
 struct Failing {
@@ -118,8 +136,16 @@ impl Read for Failing {
 
 #[test]
 fn lines_io_error_errors_once_then_stops() {
-    let r = io::BufReader::with_capacity(4, Failing { data: Cursor::new(b"ab\ncd".to_vec()) });
-    assert_eq!(collect_lines(r), [Ok("ab".to_string()), Err(io::ErrorKind::ConnectionReset)]);
+    let r = io::BufReader::with_capacity(
+        4,
+        Failing {
+            data: Cursor::new(b"ab\ncd".to_vec()),
+        },
+    );
+    assert_eq!(
+        collect_lines(r),
+        [Ok("ab".to_string()), Err(io::ErrorKind::ConnectionReset)]
+    );
 }
 
 #[test]
@@ -148,10 +174,17 @@ fn for_each_and_count_where_on_owned_iterators() {
     let mut seen = vec![];
     for_each(src(), |l| seen.push(l.unwrap().to_uppercase()));
     assert_eq!(seen, ["ALPHA", "", "BETA", "GAMMA"]);
-    assert_eq!(count_where(src(), |l| l.as_ref().is_ok_and(|s| s.contains('a'))), 3);
+    assert_eq!(
+        count_where(src(), |l| l.as_ref().is_ok_and(|s| s.contains('a'))),
+        3
+    );
     assert_eq!(count_where(src(), |_| false), 0);
     assert_eq!(count_where(lines(Cursor::new(Vec::new())), |_| true), 0);
     let mut idx = vec![];
-    for_each(enumerate(src()), |(i, l)| if l.unwrap().is_empty() { idx.push(i) });
+    for_each(enumerate(src()), |(i, l)| {
+        if l.unwrap().is_empty() {
+            idx.push(i)
+        }
+    });
     assert_eq!(idx, [1]);
 }

@@ -44,7 +44,10 @@ pub struct Store {
 impl Store {
     pub fn new<K: Into<String>, V: Into<String>>(pairs: impl IntoIterator<Item = (K, V)>) -> Self {
         Store {
-            data: pairs.into_iter().map(|(k, v)| (k.into(), v.into())).collect(),
+            data: pairs
+                .into_iter()
+                .map(|(k, v)| (k.into(), v.into()))
+                .collect(),
             ..Default::default()
         }
     }
