@@ -76,10 +76,10 @@ pub fn lookup<'a, 'k>(config: &'a str, key: &'k str) -> Option<&'a str> {
 pub fn plural_suffix(word: &str, count: usize) -> &'static str {
     if count == 1 {
         ""
-    } else if ["s", "x", "z", "ch", "sh"]
-        .iter()
-        .any(|s| word.to_lowercase().ends_with(s))
-    {
+    } else if ["s", "x", "z", "ch", "sh"].iter().any({
+        let word = word.to_ascii_lowercase();
+        move |s| word.ends_with(s)
+    }) {
         "es"
     } else {
         "s"
