@@ -61,11 +61,24 @@ impl<'a> Lexer<'a> {
         Lexer { src, pos: 0 }
     }
 
+    /// Byte offset in the source where [`Lexer::remainder`] starts, i.e.
+    /// `&src[lexer.offset()..] == lexer.remainder()` always holds.
+    ///
+    /// `0` initially; right after the end of the last token yielded; `src.len()` once the lexer
+    /// is exhausted or has returned an error.
     // TODO(challenge): implement
     pub fn offset(&self) -> usize {
         todo!("p02: offset")
     }
 
+    /// The not-yet-consumed part of the source: everything after the last token yielded,
+    /// **including** any leading whitespace (it is not skipped here).
+    ///
+    /// Initially the whole source; `""` once the lexer is exhausted (has returned `None`) or has
+    /// returned an error. Example: after the first `next()` on `"let x"`, `remainder() == " x"`.
+    ///
+    /// Lifetimes: the result borrows from the **source** (`'a`), not from the lexer — it must stay
+    /// usable after the lexer is dropped.
     // TODO(challenge): implement + fix the signature
     pub fn remainder(&self) -> &str {
         let _ = (self.src, self.pos);
@@ -76,6 +89,12 @@ impl<'a> Lexer<'a> {
 impl<'a> Iterator for Lexer<'a> {
     type Item = Result<Token<'a>, LexError>;
 
+    /// Yields the next token, following the lexing rules in the module docs:
+    /// skip whitespace, then `Ident` / `Number` / `Str` / single-char `Punct`.
+    ///
+    /// An unterminated string literal yields `Err(LexError::UnterminatedString { start })` (byte
+    /// offset of the opening quote) exactly once; after that, and after the end of input, returns
+    /// `None` forever.
     // TODO(challenge): implement
     fn next(&mut self) -> Option<Self::Item> {
         todo!("p02: next")
@@ -83,12 +102,20 @@ impl<'a> Iterator for Lexer<'a> {
 }
 
 impl<'a> Token<'a> {
+    /// The source text of the token: the identifier / digits for `Ident` / `Number`, the payload
+    /// **without quotes** for `Str`, and `None` for `Punct` (a `char` has no borrowed text).
+    ///
+    /// Lifetimes: the result borrows from the **source** (`'a`), not from the token — it must stay
+    /// usable after the token (or the `Vec` holding it) is dropped.
     // TODO(challenge): implement + fix the signature
     pub fn lexeme(&self) -> Option<&str> {
         todo!("p02: lexeme")
     }
 }
 
+/// Lexes the whole source: all tokens in order, or the first [`LexError`].
+///
+/// Example: `tokenize("a+1") == Ok(vec![Ident("a"), Punct('+'), Number("1")])`.
 // TODO(challenge): implement
 pub fn tokenize(src: &str) -> Result<Vec<Token<'_>>, LexError> {
     let _ = src;

@@ -50,6 +50,11 @@ pub enum Flow {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HandlerId(u64);
 
+/// An ordered list of event handlers.
+///
+/// To fix: `Box<dyn FnMut(..)>` means `Box<dyn FnMut(..) + 'static>`, so handlers can't borrow
+/// anything from their environment. Handlers must be allowed to borrow local state (the
+/// dispatcher then can't outlive it), while still accepting events of **any** lifetime.
 // TODO(challenge): fix the types
 #[derive(Default)]
 pub struct Dispatcher {
@@ -74,16 +79,28 @@ impl Dispatcher {
         self.handlers.is_empty()
     }
 
+    /// Appends `handler` and returns a fresh [`HandlerId`]. Ids are unique per dispatcher and never
+    /// reused, even after unsubscribing.
+    ///
+    /// To fix: accept closures that borrow local state (`&mut Vec`, `&Cell`, …), not only `'static`
+    /// ones. Must stay callable as `d.subscribe(|e| …)` without annotations. A handler must not be
+    /// able to keep the event's data after the call returns.
     pub fn subscribe(&mut self, handler: impl FnMut(&Event<'_>) -> Flow + 'static) -> HandlerId {
         let _ = (handler, self.next_id);
         todo!("p07: subscribe")
     }
 
+    /// Removes the handler with this id. Returns `true` if it was present (`false` if it was
+    /// already removed or never belonged to this dispatcher). Other handlers keep their order.
     pub fn unsubscribe(&mut self, id: HandlerId) -> bool {
         let _ = id;
         todo!("p07: unsubscribe")
     }
 
+    /// Calls the handlers with `event` in subscription order. If a handler returns `Flow::Stop`,
+    /// later handlers are not called. Returns the number of handlers called.
+    ///
+    /// `event` may borrow data that lives only for this call (e.g. a `String` created in a loop).
     pub fn dispatch(&mut self, event: &Event<'_>) -> usize {
         let _ = event;
         todo!("p07: dispatch")
@@ -96,6 +113,12 @@ pub struct Filter {
     pub skip_prefix: String,
 }
 
+/// Lazily yields, in order, the payloads of the `Event::Text` events whose payload has at least
+/// `filter.min_chars` chars and does not start with `filter.skip_prefix` (an empty
+/// `skip_prefix` filters nothing).
+///
+/// To fix: in edition 2024 the returned `impl Iterator` captures the `filter` borrow too, so the
+/// filter can't be a temporary. The iterator must borrow only `events`.
 // TODO(challenge): implement + fix the signature
 pub fn texts<'e>(events: &'e [Event<'e>], filter: &Filter) -> impl Iterator<Item = &'e str> {
     let _ = (events, filter);

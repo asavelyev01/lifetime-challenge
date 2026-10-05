@@ -41,6 +41,13 @@ pub struct Span<'a> {
     pub keyword: usize,
 }
 
+/// Iterator over the whole-word keyword matches in a text (see the module docs for the
+/// matching rules).
+///
+/// To fix: it borrows two unrelated things — the keyword list and the text — but has only one
+/// lifetime parameter, so every output is tied to *both*. Redesign it so spans/`rest()` borrow
+/// only from the text and `keyword_of()` borrows only from the keyword list.
+/// You will also need to add state (e.g. the current position).
 // TODO(challenge): redesign the lifetimes
 pub struct Scanner<'a> {
     keywords: &'a [String],
@@ -49,15 +56,27 @@ pub struct Scanner<'a> {
 
 // TODO(challenge): redesign the lifetimes + implement
 impl<'a> Scanner<'a> {
+    /// A scanner positioned at the start of `text`.
     pub fn new(keywords: &'a [String], text: &'a str) -> Self {
         Scanner { keywords, text }
     }
 
+    /// The keyword string for `span`, i.e. `&keywords[span.keyword]`.
+    ///
+    /// Lifetimes: borrows from the **keyword list** only — must stay usable after the text and the
+    /// scanner are dropped.
     pub fn keyword_of(&self, span: &Span<'_>) -> &str {
         let _ = span;
         todo!("p05: keyword_of")
     }
 
+    /// The text after the end of the last emitted span (initially the whole text); `""` once the
+    /// iterator has returned `None`.
+    ///
+    /// Example: keywords `["b"]`, text `"a b c"`: after one `next()`, `rest() == " c"`.
+    ///
+    /// Lifetimes: borrows from the **text** only — must stay usable after the keyword list and the
+    /// scanner are dropped.
     pub fn rest(&self) -> &str {
         todo!("p05: rest")
     }
@@ -67,12 +86,21 @@ impl<'a> Scanner<'a> {
 impl<'a> Iterator for Scanner<'a> {
     type Item = Span<'a>;
 
+    /// The next match, scanning left to right from the current position: at each char position,
+    /// the longest matching keyword (ties → lowest index) whose occurrence is not preceded or
+    /// followed by a word char (`_` or alphanumeric). Matches never overlap. `None` when the text
+    /// is exhausted (and forever after).
+    ///
+    /// Yielded spans borrow from the **text** only.
     fn next(&mut self) -> Option<Span<'a>> {
         let _ = (self.keywords, self.text);
         todo!("p05: next")
     }
 }
 
+/// `text` with every match wrapped in `[` `]`; everything else copied unchanged.
+///
+/// Example: keywords `["if", "else"]`, `"if x else y"` → `"[if] x [else] y"`.
 // TODO(challenge): implement
 pub fn highlight(keywords: &[String], text: &str) -> String {
     let _ = (keywords, text);

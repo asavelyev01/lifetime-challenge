@@ -71,6 +71,11 @@ impl<'r> Request<'r> {
         self
     }
 
+    /// The value of the first header whose name equals `name` ASCII-case-insensitively, or `None`.
+    ///
+    /// To fix: the value borrows the **raw input** (`'r`), not the request — a middleware must be
+    /// able to read a header and then mutate the request while still holding the value, and the
+    /// value must stay usable after the request is dropped.
     // TODO(challenge): implement + fix the signature
     pub fn header(&self, name: &str) -> Option<&str> {
         let _ = name;
@@ -109,6 +114,12 @@ pub struct StripPrefix {
     pub prefix: String,
 }
 
+/// Allows at most `max_per_user` **accepted** requests per user (the `user` header, or
+/// `"anonymous"`); further requests get `Err(Reject::RateLimited { user })` and don't count.
+///
+/// The counts must live in `counters` (read with `Counters::get`, write back with
+/// `Counters::set`, both async). Must be correct when many requests for the same user run
+/// concurrently, and its future must be `Send`. You may add fields.
 // TODO(challenge): add fields if needed
 pub struct RateLimit {
     max_per_user: usize,
@@ -116,6 +127,7 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
+    /// A rate limiter allowing `max_per_user` accepted requests per user, with empty counters.
     // TODO(challenge): adjust if you add fields
     pub fn new(max_per_user: usize) -> Self {
         RateLimit {
@@ -129,6 +141,8 @@ impl RateLimit {
     }
 }
 
+/// Ok if the request has the header `self.name` (ASCII-case-insensitive), otherwise
+/// `Err(Reject::MissingHeader(self.name.clone()))`. Doesn't modify the request.
 // TODO(challenge): implement
 impl Middleware for RequireHeader {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
@@ -137,6 +151,12 @@ impl Middleware for RequireHeader {
     }
 }
 
+/// If the path starts with `self.prefix`, removes it (an empty result becomes `"/"`); otherwise
+/// `Err(Reject::NotFound)`. Examples with prefix `"/api"`: `"/api/x"` → `"/x"`, `"/api"` → `"/"`,
+/// `"/apix"` → `"x"`, `"/v1/api"` → `NotFound`.
+///
+/// A `Cow::Borrowed` path must **stay borrowed** (a sub-slice of the original input, no
+/// allocation); a `Cow::Owned` path may be modified in place.
 // TODO(challenge): implement
 impl Middleware for StripPrefix {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
@@ -145,6 +165,8 @@ impl Middleware for StripPrefix {
     }
 }
 
+/// See [`RateLimit`]. Note that the returned future must be `Send` — think about what you hold
+/// across `.await`.
 // TODO(challenge): implement
 impl Middleware for RateLimit {
     fn handle<'a, 'r>(&'a self, req: &'a mut Request<'r>) -> BoxFuture<'a, Result<(), Reject>> {
@@ -155,6 +177,13 @@ impl Middleware for RateLimit {
 
 pub struct FnMiddleware<F>(F);
 
+/// Wraps a closure as a [`Middleware`], so one can write
+/// `from_fn(|req| Box::pin(async move { …; Ok(()) }))` with **no type annotations** on the
+/// closure; the boxed future may borrow `req`. The closure may borrow local state (it doesn't
+/// have to be `'static`), but must be thread-safe (the trait requires `Send + Sync`).
+///
+/// To do: add the bounds this needs, and write `impl Middleware for FnMiddleware<F>`
+/// (it just calls the closure).
 // TODO(challenge): add bounds (and an `impl Middleware for FnMiddleware<F>`)
 pub fn from_fn<F>(f: F) -> FnMiddleware<F> {
     FnMiddleware(f)
@@ -180,12 +209,16 @@ impl<'m> Pipeline<'m> {
         self
     }
 
+    /// Runs the stages in order on `req`; returns the (possibly modified) request, or the first
+    /// rejection (later stages are not run). With no stages, returns `req` unchanged.
     // TODO(challenge): implement
     pub async fn run<'r>(&self, req: Request<'r>) -> Result<Request<'r>, Reject> {
         let _ = (req, &self.stages);
         todo!("p10: run")
     }
 
+    /// Runs the pipeline on every request **concurrently** (all in flight at the same time, on the
+    /// current task — no spawning); results in input order.
     // TODO(challenge): implement
     pub async fn run_all<'r>(&self, reqs: Vec<Request<'r>>) -> Vec<Result<Request<'r>, Reject>> {
         let _ = reqs;

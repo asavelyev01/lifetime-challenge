@@ -73,24 +73,44 @@ impl Store {
     }
 }
 
+/// Looks `key` up in `store` (via `Store::get`).
+///
+/// To fix: the returned future must borrow only `store`, **not** `key` — it must be fine to drop
+/// the key before awaiting. The future must be `Send`. Must stay callable as
+/// `lookup(&store, key).await` and resolve to `Option<&'s str>` (it doesn't have to stay an
+/// `async fn`).
 // TODO(challenge): implement + fix the signature
 pub async fn lookup<'s>(store: &'s Store, key: &str) -> Option<&'s str> {
     let _ = (store, key);
     todo!("p08: lookup")
 }
 
+/// Looks up all `keys` **concurrently** — all `Store::get` calls in flight at the same time, on
+/// the current task (no spawning) — and returns the results in key order. Exactly one `get` per
+/// key. The results borrow from `store` only (not from `keys`).
 // TODO(challenge): implement
 pub async fn lookup_all<'s>(store: &'s Store, keys: &[&str]) -> Vec<Option<&'s str>> {
     let _ = (store, keys);
     todo!("p08: lookup_all")
 }
 
+/// Spawns one tokio task per key (immediately — the tasks must run even if the handles are
+/// dropped), each resolving to an **owned** copy of the value. Returns the handles in key order.
+///
+/// Spawned tasks must be `'static`: they can't borrow `keys` or a `&Store`.
 // TODO(challenge): implement
 pub fn spawn_lookups(store: Arc<Store>, keys: &[&str]) -> Vec<JoinHandle<Option<String>>> {
     let _ = (store, keys);
     todo!("p08: spawn_lookups")
 }
 
+/// For each key in order: look it up; if found, call `f(key, value)` and **await** the returned
+/// future before looking up the next key. Returns how many keys were found.
+///
+/// To fix the bound: the future returned by `f` must be allowed to borrow `key` and the
+/// closure's own captures (e.g. an `async |k, v| { …; log.push(..) }` closure), while `key`
+/// still must not escape the call. Keep `F` a generic parameter and keep accepting plain
+/// closures that return a future.
 // TODO(challenge): implement + fix the bound
 pub async fn for_each_found<'s, F, Fut>(store: &'s Store, keys: &[&str], f: F) -> usize
 where

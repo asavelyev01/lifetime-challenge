@@ -37,12 +37,19 @@
 
 use std::io::{self, BufRead};
 
+/// An iterator whose items may borrow from the iterator itself (each item must be dropped
+/// before calling `next()` again).
+///
+/// Part B: with this definition, `for_each`/`count_where` demand `I: 'static`, so they reject
+/// iterators over local data (`windows_mut(&mut v, 2)`). Fix that — you may restructure this
+/// trait. Keep its name and `next(&mut self)`.
 // TODO(challenge): Part B — this trait has a problem
 pub trait LendingIterator {
     type Item<'a>
     where
         Self: 'a;
 
+    /// The next item, or `None` when the iterator is exhausted.
     fn next(&mut self) -> Option<Self::Item<'_>>;
 }
 
@@ -67,6 +74,9 @@ impl<'s, T> LendingIterator for WindowsMut<'s, T> {
     where
         Self: 'a;
 
+    /// The next window of `size` consecutive elements (step 1), as a mutable slice. A slice of
+    /// length `n` yields `n - size + 1` windows (none if `size > n`); `None` forever afterwards.
+    /// Writes through a window are visible in the following windows.
     // TODO(challenge): implement
     fn next(&mut self) -> Option<&mut [T]> {
         let _ = (&self.slice, self.size, self.pos);
@@ -92,6 +102,12 @@ impl<R: BufRead> LendingIterator for Lines<R> {
     where
         Self: 'a;
 
+    /// The next line, lent from one internal `String` buffer reused for every line.
+    ///
+    /// Lines are split on `'\n'`; one trailing `'\r'` is removed; a final line without `'\n'` is
+    /// still yielded; empty input yields nothing (`"x\n"` yields only `"x"`).
+    /// An I/O error (including invalid UTF-8) is yielded once as `Err`; after it, and after the end
+    /// of input, returns `None`.
     // TODO(challenge): implement
     fn next(&mut self) -> Option<io::Result<&str>> {
         let _ = (&self.reader, &self.buf);
@@ -114,6 +130,7 @@ impl<I: LendingIterator> LendingIterator for Enumerate<I> {
     where
         Self: 'a;
 
+    /// The inner iterator's next item paired with its index (`0, 1, 2, …`).
     // TODO(challenge): implement
     fn next(&mut self) -> Option<Self::Item<'_>> {
         let _ = (&self.inner, self.count);
@@ -121,6 +138,10 @@ impl<I: LendingIterator> LendingIterator for Enumerate<I> {
     }
 }
 
+/// Calls `f` on every item of `it`, in order.
+///
+/// Part B: must work for iterators that borrow local data (`for_each(windows_mut(&mut v, 2), |w| …)`),
+/// with the closure's parameter type inferred.
 // TODO(challenge): implement (+ Part B)
 pub fn for_each<I, F>(it: I, f: F)
 where
@@ -131,6 +152,10 @@ where
     todo!("p09: for_each")
 }
 
+/// Counts the items of `it` for which `pred(&item)` returns `true`.
+///
+/// Part B: must work for iterators that borrow local data, with the closure's parameter type
+/// inferred.
 // TODO(challenge): implement (+ Part B)
 pub fn count_where<I, P>(it: I, pred: P) -> usize
 where

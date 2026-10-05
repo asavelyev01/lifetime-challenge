@@ -61,28 +61,44 @@ pub enum ParseError {
 }
 
 impl<'a> Field<'a> {
+    /// The field's name: the flag text for `Flag`, the key for `Pair`.
     // TODO(challenge): implement
     pub fn name(&self) -> &str {
         todo!("p03: name")
     }
 
+    /// The pair's value (unescaped), or `None` for a `Flag`.
     // TODO(challenge): implement
     pub fn value(&self) -> Option<&str> {
         todo!("p03: value")
     }
 
+    /// Converts the field into one that borrows nothing: every `Cow` becomes `Cow::Owned`,
+    /// content unchanged. The result is a `Field<'static>`, so it can outlive the parsed line
+    /// (and e.g. be sent to another thread).
     // TODO(challenge): implement
     pub fn into_owned(self) -> Field<'static> {
         todo!("p03: into_owned")
     }
 }
 
+/// Parses `line` into fields according to the grammar in the module docs; returns the first
+/// [`ParseError`] found scanning left to right.
+///
+/// Zero-copy: every `Cow` in the result is `Cow::Borrowed` (a slice of `line`), except quoted
+/// values that actually contained an escape (`\"`, `\\`, `\n`) — those are `Cow::Owned`.
+/// The result borrows from `line`.
+///
+/// Examples: `"a k=v"` → `[Flag("a"), Pair { key: "k", value: "v" }]`;
+/// `"k=\"x\""` → `[Pair { key: "k", value: "x" }]` (borrowed); `"=v"` → `Err(EmptyKey { at: 0 })`.
 // TODO(challenge): implement
 pub fn parse_fields(line: &str) -> Result<Vec<Field<'_>>, ParseError> {
     let _ = line;
     todo!("p03: parse_fields")
 }
 
+/// Same as [`parse_fields`] (same fields, same errors), but the result owns all its data
+/// (`Field<'static>`) and does not borrow `line`.
 // TODO(challenge): implement
 pub fn parse_owned(line: &str) -> Result<Vec<Field<'static>>, ParseError> {
     let _ = line;

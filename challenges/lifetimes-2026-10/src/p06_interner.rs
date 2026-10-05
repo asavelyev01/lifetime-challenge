@@ -52,18 +52,31 @@ impl<'a> Interner<'a> {
         self.strings.is_empty()
     }
 
+    /// Returns the id of `s`, assigning the next free id (`0, 1, 2, …` in first-seen order) if `s`
+    /// hasn't been interned yet. Stores `s` itself (no copying). O(1) expected.
+    ///
+    /// To fix: with `&'a mut self`, the first call borrows the interner mutably for the rest of its
+    /// life, so it can't be called twice. It must be callable any number of times, interleaved
+    /// with `lookup`/`resolve`.
     // TODO(challenge): implement + fix the signature
     pub fn intern(&'a mut self, s: &'a str) -> usize {
         let _ = (s, &self.ids);
         todo!("p06: intern")
     }
 
+    /// The id of `s` if it was interned, without inserting. O(1) expected.
+    ///
+    /// To fix: `s` is only a query — a temporary string (`&String::from("a")`) must be accepted.
     // TODO(challenge): implement + fix the signature
     pub fn lookup(&'a self, s: &'a str) -> Option<usize> {
         let _ = s;
         todo!("p06: lookup")
     }
 
+    /// The interned string for `id` (the very slice that was passed to `intern`), or `None`.
+    ///
+    /// To fix: the result borrows the **original text**, not the interner — it must stay usable
+    /// after the interner is dropped (but not after the text is).
     // TODO(challenge): implement + fix the signature
     pub fn resolve(&'a self, id: usize) -> Option<&'a str> {
         let _ = id;
@@ -71,12 +84,23 @@ impl<'a> Interner<'a> {
     }
 }
 
+/// Interns every `split_whitespace` word of `text`, returning their ids in order.
+///
+/// Example: on an empty interner, `"b a b"` → `[0, 1, 0]`.
+///
+/// To fix: must be callable repeatedly on the same interner, and the interner must remain usable
+/// afterwards.
 // TODO(challenge): implement + fix the signature
 pub fn intern_all<'a>(interner: &'a mut Interner<'a>, text: &'a str) -> Vec<usize> {
     let _ = (interner, text);
     todo!("p06: intern_all")
 }
 
+/// Pushes every `split_whitespace` word of `text` (as slices of `text`, no copying) onto `dst`;
+/// returns how many were pushed.
+///
+/// To fix: must be callable repeatedly on the same `Vec`, and the `Vec` must be readable
+/// afterwards. Words must not outlive `text`.
 // TODO(challenge): implement + fix the signature
 pub fn extend_words<'a>(dst: &'a mut Vec<&'a str>, text: &'a str) -> usize {
     let _ = (dst, text);
