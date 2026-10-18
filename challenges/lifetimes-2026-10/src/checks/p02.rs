@@ -22,6 +22,20 @@ pub fn remainder_outlives_the_lexer() {}
 
 /// ```
 /// use lifetimes_2026_10::p02_lexer::*;
+/// // Read-only getters: usable through a shared reference.
+/// fn peek_state<'a>(lexer: &Lexer<'a>) -> (usize, &'a str) {
+///     (lexer.offset(), lexer.remainder())
+/// }
+/// let src = String::from("let x");
+/// let mut lexer = Lexer::new(&src);
+/// assert_eq!(peek_state(&lexer), (0, "let x"));
+/// lexer.next();
+/// assert_eq!(peek_state(&lexer), (3, " x"));
+/// ```
+pub fn getters_take_shared_self() {}
+
+/// ```
+/// use lifetimes_2026_10::p02_lexer::*;
 /// let src = String::from("x = 42 + \"s\"");
 /// // `tokenize(..)` is a temporary Vec dropped at the end of this statement:
 /// let lexemes: Vec<&str> = tokenize(&src).unwrap().iter().filter_map(Token::lexeme).collect();
