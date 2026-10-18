@@ -73,7 +73,7 @@ impl<'a> Lexer<'a> {
     /// is exhausted or has returned an error.
     // TODO(challenge): implement
     pub fn offset(&self) -> usize {
-        self.peek().map(|(p, _)| p).unwrap_or(self.src.len())
+        self.chars.offset()
     }
 
     /// The not-yet-consumed part of the source: everything after the last token yielded,
@@ -86,7 +86,7 @@ impl<'a> Lexer<'a> {
     /// usable after the lexer is dropped.
     // TODO(challenge): implement + fix the signature
     pub fn remainder(&self) -> &'a str {
-        &self.src[self.offset()..]
+        self.chars.as_str()
     }
 
     fn peek(&self) -> Option<(usize, char)> {
