@@ -38,7 +38,7 @@
 //! You may change the bodies, add private fields/helpers, and fix the signatures marked
 //! `TODO(challenge)`. Don't change the `Token`/`LexError` definitions.
 
-use std::{iter::Peekable, str::CharIndices};
+use std::str::CharIndices;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Token<'a> {
@@ -55,14 +55,14 @@ pub enum LexError {
 
 pub struct Lexer<'a> {
     src: &'a str,
-    chars: Peekable<CharIndices<'a>>,
+    chars: CharIndices<'a>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
         Lexer {
             src,
-            chars: src.char_indices().peekable(),
+            chars: src.char_indices(),
         }
     }
 
@@ -72,8 +72,8 @@ impl<'a> Lexer<'a> {
     /// `0` initially; right after the end of the last token yielded; `src.len()` once the lexer
     /// is exhausted or has returned an error.
     // TODO(challenge): implement
-    pub fn offset(&mut self) -> usize {
-        self.chars.peek().map(|(p, _)| *p).unwrap_or(self.src.len())
+    pub fn offset(&self) -> usize {
+        self.peek().map(|(p, _)| p).unwrap_or(self.src.len())
     }
 
     /// The not-yet-consumed part of the source: everything after the last token yielded,
@@ -85,8 +85,12 @@ impl<'a> Lexer<'a> {
     /// Lifetimes: the result borrows from the **source** (`'a`), not from the lexer — it must stay
     /// usable after the lexer is dropped.
     // TODO(challenge): implement + fix the signature
-    pub fn remainder(&mut self) -> &'a str {
+    pub fn remainder(&self) -> &'a str {
         &self.src[self.offset()..]
+    }
+
+    fn peek(&self) -> Option<(usize, char)> {
+        self.chars.clone().next()
     }
 }
 
@@ -135,7 +139,7 @@ impl<'a> Iterator for Lexer<'a> {
         let mut current_token: Option<CurrentToken> = None;
 
         loop {
-            match (self.chars.peek().cloned(), &current_token) {
+            match (self.peek(), &current_token) {
                 (None, None) => {
                     self.chars.next();
                     return None;
