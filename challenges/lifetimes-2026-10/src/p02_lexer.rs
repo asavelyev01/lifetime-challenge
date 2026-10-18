@@ -38,6 +38,8 @@
 //! You may change the bodies, add private fields/helpers, and fix the signatures marked
 //! `TODO(challenge)`. Don't change the `Token`/`LexError` definitions.
 
+use std::{iter::Peekable, str::CharIndices};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Token<'a> {
     Ident(&'a str),
@@ -53,12 +55,15 @@ pub enum LexError {
 
 pub struct Lexer<'a> {
     src: &'a str,
-    pos: usize,
+    chars: Peekable<CharIndices<'a>>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(src: &'a str) -> Self {
-        Lexer { src, pos: 0 }
+        Lexer {
+            src,
+            chars: src.char_indices().peekable(),
+        }
     }
 
     /// Byte offset in the source where [`Lexer::remainder`] starts, i.e.
@@ -67,8 +72,8 @@ impl<'a> Lexer<'a> {
     /// `0` initially; right after the end of the last token yielded; `src.len()` once the lexer
     /// is exhausted or has returned an error.
     // TODO(challenge): implement
-    pub fn offset(&self) -> usize {
-        todo!("p02: offset")
+    pub fn offset(&mut self) -> usize {
+        self.chars.peek().map(|(p, _)| *p).unwrap_or(self.src.len())
     }
 
     /// The not-yet-consumed part of the source: everything after the last token yielded,
@@ -80,9 +85,8 @@ impl<'a> Lexer<'a> {
     /// Lifetimes: the result borrows from the **source** (`'a`), not from the lexer — it must stay
     /// usable after the lexer is dropped.
     // TODO(challenge): implement + fix the signature
-    pub fn remainder(&self) -> &str {
-        let _ = (self.src, self.pos);
-        todo!("p02: remainder")
+    pub fn remainder(&mut self) -> &'a str {
+        &self.src[self.offset()..]
     }
 }
 
@@ -97,7 +101,95 @@ impl<'a> Iterator for Lexer<'a> {
     /// `None` forever.
     // TODO(challenge): implement
     fn next(&mut self) -> Option<Self::Item> {
-        todo!("p02: next")
+        #[derive(Copy, Clone)]
+        enum TokenType {
+            Ident,
+            Number,
+            Str,
+            Punct,
+        }
+        impl TokenType {
+            fn from_first(first: char) -> Self {
+                match first {
+                    c if c == '_' || c.is_alphabetic() => Self::Ident,
+                    c if c.is_ascii_digit() => Self::Number,
+                    '"' => Self::Str,
+                    _ => Self::Punct,
+                }
+            }
+
+            pub fn ended_by(&self, c: char) -> bool {
+                match self {
+                    TokenType::Ident => !(c == '_' || c.is_alphanumeric()),
+                    TokenType::Number => !c.is_ascii_digit(),
+                    TokenType::Str => c == '"',
+                    TokenType::Punct => true,
+                }
+            }
+        }
+        struct CurrentToken {
+            start: usize,
+            pub token_type: TokenType,
+        }
+
+        let mut current_token: Option<CurrentToken> = None;
+
+        loop {
+            match (self.chars.peek().cloned(), &current_token) {
+                (None, None) => {
+                    self.chars.next();
+                    return None;
+                }
+                (Some((_, c)), None) if c.is_whitespace() => {
+                    self.chars.next();
+                }
+                (Some((pos, c)), None) => {
+                    self.chars.next();
+                    let token_type = TokenType::from_first(c);
+
+                    match token_type {
+                        TokenType::Punct => return Some(Ok(Token::Punct(c))),
+                        _ => {
+                            current_token = Some(CurrentToken {
+                                start: pos,
+                                token_type,
+                            })
+                        }
+                    }
+                }
+                (Some((pos, c)), Some(CurrentToken { start, token_type }))
+                    if token_type.ended_by(c) =>
+                {
+                    return Some(Ok({
+                        match &token_type {
+                            TokenType::Ident => Token::Ident(&self.src[*start..pos]),
+                            TokenType::Number => Token::Number(&self.src[*start..pos]),
+                            TokenType::Punct => Token::Punct(c),
+                            TokenType::Str => {
+                                self.chars.next();
+                                Token::Str(&self.src[start + 1..pos])
+                            }
+                        }
+                    }));
+                }
+                (None, Some(CurrentToken { start, token_type })) => {
+                    self.chars.next();
+                    return {
+                        match &token_type {
+                            TokenType::Ident => Some(Ok(Token::Ident(&self.src[*start..]))),
+                            TokenType::Number => Some(Ok(Token::Number(&self.src[*start..]))),
+                            TokenType::Punct => panic!("Unexpected"),
+                            TokenType::Str => {
+                                return Some(Err(LexError::UnterminatedString { start: *start }));
+                            }
+                        }
+                    };
+                }
+                _ => {
+                    self.chars.next();
+                }
+            };
+        }
     }
 }
 
@@ -108,8 +200,11 @@ impl<'a> Token<'a> {
     /// Lifetimes: the result borrows from the **source** (`'a`), not from the token — it must stay
     /// usable after the token (or the `Vec` holding it) is dropped.
     // TODO(challenge): implement + fix the signature
-    pub fn lexeme(&self) -> Option<&str> {
-        todo!("p02: lexeme")
+    pub fn lexeme(&self) -> Option<&'a str> {
+        match self {
+            Token::Ident(s) | Token::Number(s) | Token::Str(s) => Some(s),
+            Token::Punct(_) => None,
+        }
     }
 }
 
@@ -117,7 +212,6 @@ impl<'a> Token<'a> {
 ///
 /// Example: `tokenize("a+1") == Ok(vec![Ident("a"), Punct('+'), Number("1")])`.
 // TODO(challenge): implement
-pub fn tokenize(src: &str) -> Result<Vec<Token<'_>>, LexError> {
-    let _ = src;
-    todo!("p02: tokenize")
+pub fn tokenize<'a>(src: &'a str) -> Result<Vec<Token<'a>>, LexError> {
+    Lexer::new(src).collect()
 }
